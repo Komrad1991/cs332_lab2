@@ -1,0 +1,84 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:cs332_lab2.Controls"
+        x:Class="cs332_lab2.Views.MainWindow"
+        Width="1400" Height="900"
+        MinWidth="1000" MinHeight="700"
+        Title="CS332 — Image Processing Lab 2">
+  <Grid RowDefinitions="Auto,*">
+    <Border Grid.Row="0" Padding="14" Background="#111827">
+      <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+        <Button Grid.Column="0" Classes="primary" Content="Open image" Click="OpenImage_Click" Margin="0,0,8,0"/>
+        <Button Grid.Column="1" Content="Save HSV result" Click="SaveHsv_Click"/>
+        <TextBlock Grid.Column="2" Margin="18,0" VerticalAlignment="Center" Foreground="#D1D5DB" x:Name="FileNameText" Text="No image loaded"/>
+        <TextBlock Grid.Column="3" VerticalAlignment="Center" Foreground="#9CA3AF" Text="CS332 Lab 2"/>
+      </Grid>
+    </Border>
+
+    <TabControl Grid.Row="1" Margin="12">
+      <TabItem Header="1 · Grayscale">
+        <ScrollViewer>
+          <StackPanel Margin="12" Spacing="14">
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
+              <Border Grid.Column="0" Classes="card" Padding="8">
+                <StackPanel Spacing="6"><TextBlock FontWeight="Bold" Text="Original"/><Image x:Name="OriginalImage" Height="280" Stretch="Uniform"/></StackPanel>
+              </Border>
+              <Border Grid.Column="1" Padding="8"><StackPanel Spacing="6"><TextBlock FontWeight="Bold" Text="Formula 1 — BT.601"/><Image x:Name="Gray1Image" Height="280" Stretch="Uniform"/></StackPanel></Border>
+              <Border Grid.Column="2" Padding="8"><StackPanel Spacing="6"><TextBlock FontWeight="Bold" Text="Formula 2 — BT.709"/><Image x:Name="Gray2Image" Height="280" Stretch="Uniform"/></StackPanel></Border>
+            </Grid>
+
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+              <StackPanel Grid.Column="0" Spacing="6"><TextBlock FontWeight="Bold" Text="Difference |Y₁ − Y₂|"/><Image x:Name="DifferenceImage" Height="250" Stretch="Uniform"/></StackPanel>
+              <StackPanel Grid.Column="1" Spacing="6"><TextBlock FontWeight="Bold" Text="Histogram — Formula 1"/><controls:HistogramControl x:Name="Gray1Histogram" Height="250"/></StackPanel>
+            </Grid>
+            <StackPanel Spacing="6"><TextBlock FontWeight="Bold" Text="Histogram — Formula 2"/><controls:HistogramControl x:Name="Gray2Histogram" Height="250"/></StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="2 · RGB channels">
+        <ScrollViewer>
+          <StackPanel Margin="12" Spacing="14">
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
+              <StackPanel Grid.Column="0" Spacing="6"><TextBlock FontWeight="Bold" Text="R channel"/><Image x:Name="RedImage" Height="260" Stretch="Uniform"/><controls:HistogramControl x:Name="RedHistogram" Height="180"/></StackPanel>
+              <StackPanel Grid.Column="1" Spacing="6"><TextBlock FontWeight="Bold" Text="G channel"/><Image x:Name="GreenImage" Height="260" Stretch="Uniform"/><controls:HistogramControl x:Name="GreenHistogram" Height="180"/></StackPanel>
+              <StackPanel Grid.Column="2" Spacing="6"><TextBlock FontWeight="Bold" Text="B channel"/><Image x:Name="BlueImage" Height="260" Stretch="Uniform"/><controls:HistogramControl x:Name="BlueHistogram" Height="180"/></StackPanel>
+            </Grid>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="3 · HSV">
+        <Grid Margin="12" ColumnDefinitions="*,360" ColumnSpacing="18">
+          <Border Grid.Column="0" Padding="10">
+            <StackPanel Spacing="8">
+              <TextBlock FontWeight="Bold" Text="Preview after RGB → HSV → RGB"/>
+              <Image x:Name="HsvImage" Stretch="Uniform"/>
+            </StackPanel>
+          </Border>
+
+          <Border Grid.Column="1" Padding="18" Background="#111827" CornerRadius="10">
+            <StackPanel Spacing="14">
+              <TextBlock FontSize="22" FontWeight="Bold" Text="HSV controls"/>
+              <TextBlock Text="Hue shift"/>
+              <TextBlock x:Name="HueValueText" FontWeight="SemiBold"/>
+              <Slider x:Name="HueSlider" Minimum="-180" Maximum="180" Value="0" TickFrequency="30" ValueChanged="HsvSlider_ValueChanged"/>
+
+              <TextBlock Text="Saturation"/>
+              <TextBlock x:Name="SaturationValueText" FontWeight="SemiBold"/>
+              <Slider x:Name="SaturationSlider" Minimum="-1" Maximum="1" Value="0" TickFrequency="0.1" ValueChanged="HsvSlider_ValueChanged"/>
+
+              <TextBlock Text="Brightness / Value"/>
+              <TextBlock x:Name="ValueValueText" FontWeight="SemiBold"/>
+              <Slider x:Name="ValueSlider" Minimum="-1" Maximum="1" Value="0" TickFrequency="0.1" ValueChanged="HsvSlider_ValueChanged"/>
+
+              <Button Content="Reset" Click="ResetHsv_Click"/>
+              <Separator/>
+              <TextBlock Foreground="#9CA3AF" TextWrapping="Wrap" Text="Changes are applied to the original RGB image. The preview is never repeatedly converted, avoiding accumulated rounding errors."/>
+            </StackPanel>
+          </Border>
+        </Grid>
+      </TabItem>
+    </TabControl>
+  </Grid>
+</Window>
