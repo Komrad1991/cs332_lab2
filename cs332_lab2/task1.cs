@@ -1,30 +1,29 @@
 ﻿using System;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
+using System.IO;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace cs332_lab2
 {
     internal class task1
     {
         private readonly string image_path;
-        private readonly Bitmap source;
+        private readonly Image<Rgb24> source;
 
         public int[] Histogram1 { get; private set; }
         public int[] Histogram2 { get; private set; }
 
-        public Bitmap Gray1 { get; private set; }
-        public Bitmap Gray2 { get; private set; }
-        public Bitmap Difference { get; private set; }
+        public Image<Rgb24> Gray1 { get; private set; }
+        public Image<Rgb24> Gray2 { get; private set; }
+        public Image<Rgb24> Difference { get; private set; }
 
         /// <summary>
         /// Преобразует изображение в оттенки серого
         /// </summary>
-        /// <param name="image"></param>
         public task1(string image)
         {
             image_path = image;
-            source = new Bitmap(image_path);
+            source = Image.Load<Rgb24>(image_path);
 
             Gray1 = ConvertFormula1(source);
             Gray2 = ConvertFormula2(source);
@@ -34,169 +33,94 @@ namespace cs332_lab2
 
             Difference = BuildDifference(Gray1, Gray2);
 
-            
-            string dir = System.IO.Path.GetDirectoryName(image_path) ?? ".";
-            string name = System.IO.Path.GetFileNameWithoutExtension(image_path);
-            Gray1.Save(System.IO.Path.Combine(dir, name + "_gray1.png"), ImageFormat.Png);
-            Gray2.Save(System.IO.Path.Combine(dir, name + "_gray2.png"), ImageFormat.Png);
-            Difference.Save(System.IO.Path.Combine(dir, name + "_diff.png"), ImageFormat.Png);
+            string dir = Path.GetDirectoryName(image_path) ?? ".";
+            string name = Path.GetFileNameWithoutExtension(image_path);
+            Gray1.SaveAsPng(Path.Combine(dir, name + "_gray1.png"));
+            Gray2.SaveAsPng(Path.Combine(dir, name + "_gray2.png"));
+            Difference.SaveAsPng(Path.Combine(dir, name + "_diff.png"));
         }
 
         /// <summary>
-        /// Формула 1
-        /// Y = 0.299*R + 0.587*G + 0.114*B
+        /// Формула 1: Y = 0.299*R + 0.587*G + 0.114*B
         /// </summary>
-        private Bitmap ConvertFormula1(Bitmap src)
-        {
-            return ConvertCore(src, 0.299, 0.587, 0.114);
-        }
+        private Image<Rgb24> ConvertFormula1(Image<Rgb24> src) =>
+            ConvertCore(src, 0.299, 0.587, 0.114);
 
         /// <summary>
-        /// Формула 2
-        /// Y = 0.2126*R + 0.7152*G + 0.0722*B
+        /// Формула 2: Y = 0.2126*R + 0.7152*G + 0.0722*B
         /// </summary>
-        private Bitmap ConvertFormula2(Bitmap src)
+        private Image<Rgb24> ConvertFormula2(Image<Rgb24> src) =>
+            ConvertCore(src, 0.2126, 0.7152, 0.0722);
+
+        private Image<Rgb24> ConvertCore(Image<Rgb24> src, double wr, double wg, double wb)
         {
-            return ConvertCore(src, 0.2126, 0.7152, 0.0722);
-        }
+            var dst = new Image<Rgb24>(src.Width, src.Height);
 
-        private Bitmap ConvertCore(Bitmap src, double wr, double wg, double wb)
-        {
-            int w = src.Width;
-            int h = src.Height;
-            var dst = new Bitmap(w, h, PixelFormat.Format24bppRgb);
-
-            var srcData = src.LockBits(new Rectangle(0, 0, w, h),
-                ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
-            var dstData = dst.LockBits(new Rectangle(0, 0, w, h),
-                ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
-
-            try
+            src.ProcessPixelRows(dst, (srcAcc, dstAcc) =>
             {
-                int srcStride = srcData.Stride;
-                int dstStride = dstData.Stride;
-                byte[] srcBuf = new byte[srcStride * h];
-                byte[] dstBuf = new byte[dstStride * h];
-                Marshal.Copy(srcData.Scan0, srcBuf, 0, srcBuf.Length);
-
-                for (int y = 0; y < h; y++)
+                for (int y = 0; y < srcAcc.Height; y++)
                 {
-                    int sRow = y * srcStride;
-                    int dRow = y * dstStride;
-                    for (int x = 0; x < w; x++)
-                    {
-                        int i = sRow + x * 3;
-                        byte b = srcBuf[i];
-                        byte g = srcBuf[i + 1];
-                        byte r = srcBuf[i + 2];
+                    var sRow = srcAcc.GetRowSpan(y);
+                    var dRow = dstAcc.GetRowSpan(y);
 
-                        int yVal = (int)Math.Round(wr * r + wg * g + wb * b);
+                    for (int x = 0; x < sRow.Length; x++)
+                    {
+                        var p = sRow[x];
+                        int yVal = (int)Math.Round(wr * p.R + wg * p.G + wb * p.B);
                         if (yVal < 0) yVal = 0;
                         if (yVal > 255) yVal = 255;
                         byte yb = (byte)yVal;
 
-                        int j = dRow + x * 3;
-                        dstBuf[j] = yb;
-                        dstBuf[j + 1] = yb;
-                        dstBuf[j + 2] = yb;
+                        dRow[x] = new Rgb24(yb, yb, yb);
                     }
                 }
-                Marshal.Copy(dstBuf, 0, dstData.Scan0, dstBuf.Length);
-            }
-            finally
-            {
-                src.UnlockBits(srcData);
-                dst.UnlockBits(dstData);
-            }
+            });
 
             return dst;
         }
 
         /// <summary>
-        /// Построение гистограммы по каналу R
+        /// Построение гистограммы по каналу R (изображение уже серое)
         /// </summary>
-        private int[] BuildHistogram(Bitmap gray)
+        private int[] BuildHistogram(Image<Rgb24> gray)
         {
             var hist = new int[256];
-            int w = gray.Width;
-            int h = gray.Height;
 
-            var data = gray.LockBits(new Rectangle(0, 0, w, h),
-                ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
-            try
+            gray.ProcessPixelRows(acc =>
             {
-                int stride = data.Stride;
-                byte[] buf = new byte[stride * h];
-                Marshal.Copy(data.Scan0, buf, 0, buf.Length);
-
-                for (int y = 0; y < h; y++)
+                for (int y = 0; y < acc.Height; y++)
                 {
-                    int row = y * stride;
-                    for (int x = 0; x < w; x++)
-                    {
-                        byte v = buf[row + x * 3 + 2]; // R
-                        hist[v]++;
-                    }
+                    var row = acc.GetRowSpan(y);
+                    for (int x = 0; x < row.Length; x++)
+                        hist[row[x].R]++;
                 }
-            }
-            finally
-            {
-                gray.UnlockBits(data);
-            }
+            });
+
             return hist;
         }
 
         /// <summary>
-        /// Разность двух полутоновых изображений.
+        /// Разность двух полутоновых изображений
         /// </summary>
-        private Bitmap BuildDifference(Bitmap a, Bitmap b)
+        private Image<Rgb24> BuildDifference(Image<Rgb24> a, Image<Rgb24> b)
         {
-            int w = a.Width;
-            int h = a.Height;
-            var dst = new Bitmap(w, h, PixelFormat.Format24bppRgb);
+            var dst = a.Clone();
 
-            var ad = a.LockBits(new Rectangle(0, 0, w, h),
-                ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
-            var bd = b.LockBits(new Rectangle(0, 0, w, h),
-                ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
-            var dd = dst.LockBits(new Rectangle(0, 0, w, h),
-                ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
-
-            try
+            dst.ProcessPixelRows(b, (dAcc, bAcc) =>
             {
-                byte[] aBuf = new byte[ad.Stride * h];
-                byte[] bBuf = new byte[bd.Stride * h];
-                byte[] dBuf = new byte[dd.Stride * h];
-                Marshal.Copy(ad.Scan0, aBuf, 0, aBuf.Length);
-                Marshal.Copy(bd.Scan0, bBuf, 0, bBuf.Length);
-
-                for (int y = 0; y < h; y++)
+                for (int y = 0; y < dAcc.Height; y++)
                 {
-                    int aRow = y * ad.Stride;
-                    int bRow = y * bd.Stride;
-                    int dRow = y * dd.Stride;
-                    for (int x = 0; x < w; x++)
-                    {
-                        int va = aBuf[aRow + x * 3 + 2];
-                        int vb = bBuf[bRow + x * 3 + 2];
-                        int diff = Math.Abs(va - vb);
-                        if (diff > 255) diff = 255;
-                        byte dv = (byte)diff;
+                    var dRow = dAcc.GetRowSpan(y);
+                    var bRow = bAcc.GetRowSpan(y);
 
-                        int k = dRow + x * 3;
-                        dBuf[k] = dv;
-                        dBuf[k + 1] = dv;
-                        dBuf[k + 2] = dv;
+                    for (int x = 0; x < dRow.Length; x++)
+                    {
+                        int diff = Math.Abs(dRow[x].R - bRow[x].R);
+                        byte dv = (byte)diff;
+                        dRow[x] = new Rgb24(dv, dv, dv);
                     }
                 }
-                Marshal.Copy(dBuf, 0, dd.Scan0, dBuf.Length);
-            }
-            finally
-            {
-                a.UnlockBits(ad);
-                b.UnlockBits(bd);
-                dst.UnlockBits(dd);
-            }
+            });
 
             return dst;
         }
@@ -206,30 +130,46 @@ namespace cs332_lab2
         /// </summary>
         public void SaveHistogram(int[] hist, string path, int width = 512, int height = 256)
         {
-            var bmp = new Bitmap(width, height, PixelFormat.Format24bppRgb);
-            using (var g = Graphics.FromImage(bmp))
+            using var bmp = new Image<Rgb24>(width, height);
+
+            double max = 0;
+            for (int i = 0; i < 256; i++)
+                if (hist[i] > 0) max = Math.Max(max, Math.Log(hist[i] + 1));
+
+            if (max <= 0) max = 1;
+
+            float barW = (float)width / 256f;
+            var white = new Rgb24(255, 255, 255);
+            var black = new Rgb24(0, 0, 0);
+
+            bmp.ProcessPixelRows(acc =>
             {
-                g.Clear(Color.White);
+                // Заливаем белым
+                for (int y = 0; y < height; y++)
+                    acc.GetRowSpan(y).Fill(white);
 
-                double max = 0;
+                // Рисуем чёрные столбцы
                 for (int i = 0; i < 256; i++)
-                    if (hist[i] > 0) max = Math.Max(max, Math.Log(hist[i] + 1));
-
-                if (max <= 0) max = 1;
-
-                float barW = (float)width / 256f;
-                using (var pen = new Pen(Color.Black))
                 {
-                    for (int i = 0; i < 256; i++)
+                    double v = hist[i] > 0 ? Math.Log(hist[i] + 1) : 0;
+                    int barH = (int)(v / max * (height - 10));
+
+                    int x0 = (int)(i * barW);
+                    int x1 = (int)((i + 1) * barW);
+                    if (x1 <= x0) x1 = x0 + 1;
+                    if (x1 > width) x1 = width;
+
+                    int yStart = height - barH;
+                    for (int y = yStart; y < height; y++)
                     {
-                        double v = hist[i] > 0 ? Math.Log(hist[i] + 1) : 0;
-                        int barH = (int)(v / max * (height - 10));
-                        float x = i * barW;
-                        g.DrawRectangle(pen, x, height - barH, Math.Max(1, barW - 1), barH);
+                        var row = acc.GetRowSpan(y);
+                        for (int x = x0; x < x1; x++)
+                            row[x] = black;
                     }
                 }
-            }
-            bmp.Save(path, ImageFormat.Png);
+            });
+
+            bmp.SaveAsPng(path);
         }
 
         /// <summary>
@@ -239,11 +179,11 @@ namespace cs332_lab2
         {
             var t = new task1(imagePath);
 
-            string dir = System.IO.Path.GetDirectoryName(imagePath) ?? ".";
-            string name = System.IO.Path.GetFileNameWithoutExtension(imagePath);
+            string dir = Path.GetDirectoryName(imagePath) ?? ".";
+            string name = Path.GetFileNameWithoutExtension(imagePath);
 
-            t.SaveHistogram(t.Histogram1, System.IO.Path.Combine(dir, name + "_hist1.png"));
-            t.SaveHistogram(t.Histogram2, System.IO.Path.Combine(dir, name + "_hist2.png"));
+            t.SaveHistogram(t.Histogram1, Path.Combine(dir, name + "_hist1.png"));
+            t.SaveHistogram(t.Histogram2, Path.Combine(dir, name + "_hist2.png"));
 
             Console.WriteLine($"Обработано: {imagePath}");
             Console.WriteLine($"  Gray1: {name}_gray1.png");
