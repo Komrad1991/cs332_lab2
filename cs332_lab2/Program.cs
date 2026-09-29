@@ -9,5 +9,8 @@ class Program
       
       string path2 = args.Length > 0 ? args[0] : "../../../Alice.png";
       task2.Run(path2);
+
+   string path3 = "images.jpg";
+   task3.Run(path3, 40, 2, 2);
     }
 }
