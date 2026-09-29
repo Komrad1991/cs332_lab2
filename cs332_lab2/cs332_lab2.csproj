@@ -1,35 +1,32 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <OutputType>Exe</OutputType>
+        <OutputType>WinExe</OutputType>
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
     </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="System.Drawing.Common" Version="10.0.12" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="ФРУКТЫ.jpg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
     <ItemGroup>
+        <PackageReference Include="Avalonia" Version="11.3.11"/>
+        <PackageReference Include="Avalonia.Desktop" Version="11.3.11"/>
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.11"/>
+
         <PackageReference Include="SixLabors.ImageSharp" Version="3.1.6"/>
         <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.5"/>
-    </ItemGroup>
-  
-  <ItemGroup>
-    <PackageReference Include="System.Drawing.Common" Version="10.0.12" />
-  </ItemGroup>
 
-	<ItemGroup>
-		<None Update="images.jpg">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-	</ItemGroup>
+        <PackageReference Include="System.Drawing.Common" Version="10.0.12"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Update="ФРУКТЫ.jpg">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+
+        <None Update="images.jpg">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
 
 </Project>
